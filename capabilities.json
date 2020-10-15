@@ -14,6 +14,16 @@
             "displayName": "Fields",
             "name": "svalue",
             "kind": "Measure"
+        },
+        {
+            "displayName": "JSON Fields",
+            "name": "jvalueg",
+            "kind": "Grouping"
+        },
+        {
+            "displayName": "JSON Value Fields",
+            "name": "jvalue",
+            "kind": "Measure"
         }
     ],
     "objects": {
@@ -334,6 +344,17 @@
                     }
                 }
             }
+        },
+        "measureSettings": {
+            "displayName": "Measure Settings",
+            "properties": {
+                "jsonName": {
+                    "displayName": "JSON Name",
+                    "type": {
+                        "text": true 
+                    }
+                }
+            }
         }
     },
     "dataViewMappings": [
@@ -341,12 +362,15 @@
           "conditions": [
               {
                   "category": {
-                      "max": 1
+                      "max": 10
                   },
                   "cvalue": {
                       "max": 1
                   },
                   "svalue": {
+                      "max": 20
+                  },
+                  "jvalue": {
                       "max": 20
                   }
               }
@@ -362,7 +386,9 @@
             },
             "values": {
                 "select": [ { "bind": { "to": "cvalue" } },
-                            { "bind": { "to": "svalue" } }],
+                            { "bind": { "to": "svalue" } },
+                            { "bind": { "to": "jvalue" } },
+                            { "bind": { "to": "jvalueg" } }],
                 "dataReductionAlgorithm": { "top": {} }
             }
           }

@@ -114,6 +114,7 @@ export class SettingState {
     categoryFontWeight: string = "Bold";
     borderColor: string = "#000000";
     borderSize: number = 1;
+    jsonName: string = "Detail";
 }
 
 export class Visual implements IVisual {
@@ -138,6 +139,7 @@ export class Visual implements IVisual {
     private element;
     private cvalueName;
     private svalueName;
+    private jvalueName;
     public static scrollWidth = 20;
     private adaptiveCard;
     private categoryName;
@@ -218,6 +220,7 @@ export class Visual implements IVisual {
         // data object to bind the template to
         let sampleData = dataFields, that = this;
         if (this.settings.sampleJSONData && sampleData !== null) sampleData = JSON.parse(dataFields);
+        console.log(JSON.stringify(sampleData));
         let context: ACData.IEvaluationContext = { $root : sampleData };
         
         // "Expand" the template - this generates the final Adaptive Card,
@@ -358,6 +361,7 @@ export class Visual implements IVisual {
         this.setSetting(objects, this.settings, 1, "categorySettings", "categoryFontWeight", 0);
         this.setSetting(objects, this.settings, 1, "categorySettings", "categoryFontSize", 0);
         this.setSetting(objects, this.settings, 2, "categorySettings", "categoryFontColor", 0);
+        this.setSetting(objects, this.settings, 1, "measureSettings", "jsonName", 0);
     }
 
     private getContextMenu(svg, selection) {
@@ -531,18 +535,28 @@ export class Visual implements IVisual {
         this.divSelection.data(this.getSelectionData(selectionIdOptions, this.divSelection));
     }
 
-    public getData(categories, cvalueArr, svalueArr) {
-        let data = [];
-        for (let i = 0; i < categories.length; i++) {
-            let svalue = {};
-            for (let j = 0; j < svalueArr.length; j++) {
-                let val = svalueArr[j][i], name = this.svalueName[j].toString();
-                let dt = new Date(val);
-                if (!isNaN(svalueArr[j][i])) svalue[name] = Number(val);
-                else if (val && dt.toString() !== "Invalid Date" && dt.getFullYear() > 1800 && (Visual.ISDATE(val))) svalue[name] = this.getISOString(dt);
-                else svalue[name] = this.formatterValuesArr[j].format(Visual.GETSTRING(val));
+    private getObjectValue(svalue, valueArr, i, valueName) {
+        for (let j = 0; j < valueArr.length; j++) {
+            let val = valueArr[j][i], name = valueName[j].toString();
+            let dt = new Date(val);
+            if (val && dt.toString() !== "Invalid Date" && dt.getFullYear() > 1800 && (Visual.ISDATE(val))) svalue[name] = this.getISOString(dt);
+            else svalue[name] = this.formatterValuesArr[j].format(Visual.GETSTRING(val));
+        }
+        return svalue;
+    }
+
+    public getData(categories, cvalueArr, svalueArr, jvalueArr, groupedCnt) {
+        let data = [], len = categories.length / groupedCnt;
+        for (let i = 0; i < len; i++) {
+            let svalue = {}, ind = i * groupedCnt;
+            svalue = this.getObjectValue(svalue, svalueArr, ind, this.svalueName);
+            svalue[this.settings.jsonName] = [];
+            for (let j = 0; j < groupedCnt; j++) {
+                if (ind + j >= categories.length) break;
+                let jvalue = {};
+                svalue[this.settings.jsonName].push(this.getObjectValue(jvalue, jvalueArr, ind + j, this.jvalueName));
             }
-            data.push({category: categories[i], cvalue: cvalueArr[0], svalue: svalue});
+            data.push({category: categories[ind], cvalue: cvalueArr[0], svalue: svalue});
         }
         return data;
     }
@@ -566,10 +580,10 @@ export class Visual implements IVisual {
         this.setSettings(objects);
 
         let columns = dataViews[0].metadata.columns, sandboxWidth = $('#sandbox-host').width(), sandboxHeight = $('#sandbox-host').height();
-        let cvalueArr = [], svalueArr = [], categories = [];
+        let cvalueArr = [], svalueArr = [], categories = [], jvalueArr = [];
         this.setSelectedIdOptions(categorical, dataViews[0]);
         let innerValueCount = 0;
-        this.cvalueName = [], this.svalueName = [];
+        this.cvalueName = [], this.svalueName = [], this.jvalueName = [];
         for (let i = 0; i < values.length; i++) {
             if (values[i].source.roles["cvalue"]) {
                 this.cvalueName.push(values[i].source.displayName);
@@ -588,13 +602,27 @@ export class Visual implements IVisual {
                     tmp.push(values[i].values[j]);
                 }
                 svalueArr.push(tmp);
+            } else if (values[i].source.roles["jvalue"]) {
+                let displayName = values[i].source.displayName.toString();
+                if (displayName.indexOf("First ") == 0) displayName = displayName.slice(6);
+                this.jvalueName.push(displayName);
+                let tmp = [];
+                for (let j = 0; j < values[i].values.length; j++) { 
+                    tmp.push(values[i].values[j]);
+                }
+                jvalueArr.push(tmp);
             }
         }
         this.getFormatter(dataViews[0]);
         this.categoryName = null;
         if (categorical.categories) categories = categorical.categories[0].values, this.categoryName = categorical.categories[0].source.displayName, this.categoryId = categorical.categories[0].values[0];
         else categories = this.cvalueName;
-        let data = this.getData(categories, cvalueArr, svalueArr);
+        let groupedCnt = 0;
+        for (let i = 0; i < categories.length; i++) {
+            if (categories[i] !== categories[0]) break;
+            groupedCnt ++;
+        }
+        let data = this.getData(categories, cvalueArr, svalueArr, jvalueArr, groupedCnt);
         this.drawHtml(sandboxWidth, sandboxHeight, data);
         this.tooltipServiceWrapper.addTooltip(this.clipSelection, (tooltipEvent: TooltipEventArgs < SelectionIdOption > ) => this.getTooltipData(tooltipEvent)
             , (tooltipEvent: TooltipEventArgs < SelectionIdOption > ) => tooltipEvent.data.identity);
@@ -732,6 +760,18 @@ export class Visual implements IVisual {
         return internalInstances;
     }
 
+    private enumerateMeasureSettings() {
+        let internalInstances: VisualObjectInstance[] = [];
+        internalInstances.push( < VisualObjectInstance > {
+            objectName: "measureSettings",
+            selector: null,
+            properties: {
+                jsonName: this.settings.jsonName
+            }
+        });
+        return internalInstances;
+    }
+
     public enumerateObjectInstances(options: EnumerateVisualObjectInstancesOptions): VisualObjectInstance[] | VisualObjectInstanceEnumerationObject {
 
         let internalInstances: VisualObjectInstance[] = [];
@@ -740,6 +780,8 @@ export class Visual implements IVisual {
                 return this.enumerateRenderGroup();
             case "categorySettings":
                 return this.enumerateCategorySettings();
+            case "measureSettings":
+                return this.enumerateMeasureSettings();
         }
         return internalInstances;
     }

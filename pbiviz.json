@@ -1,10 +1,10 @@
 {
   "visual": {
-    "name": "AdaptiveCards 1.0.1",
-    "displayName": "AdaptiveCards 1.0.1",
+    "name": "AdaptiveCards 1.0.2",
+    "displayName": "AdaptiveCards 1.0.2",
     "guid": "adaptiveCards1267F9A0298D434386A9E71CED194547",
     "visualClassName": "Visual",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "description": "AdaptiveCards",
     "supportUrl": "smith11041104@gmail.com",
     "gitHubUrl": ""
