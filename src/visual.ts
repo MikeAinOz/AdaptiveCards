@@ -220,7 +220,6 @@ export class Visual implements IVisual {
         // data object to bind the template to
         let sampleData = dataFields, that = this;
         if (this.settings.sampleJSONData && sampleData !== null) sampleData = JSON.parse(dataFields);
-        console.log(JSON.stringify(sampleData));
         let context: ACData.IEvaluationContext = { $root : sampleData };
         
         // "Expand" the template - this generates the final Adaptive Card,
