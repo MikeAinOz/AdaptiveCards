@@ -9,3 +9,4 @@ typings
 webpack.statistics.*
 vim.exe.stackdump
 .vscode
+assets/desktop.ini
